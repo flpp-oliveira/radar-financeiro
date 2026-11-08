@@ -1,0 +1,33 @@
+---
+import Base from '@/layouts/Base.astro'
+import PageHeader from '@/components/PageHeader.astro'
+import { InstitutionsExplorer } from '@/components/InstitutionsExplorer'
+import { listaInstituicoes, meta } from '@/lib/data'
+import { reaisCompacto } from '@/lib/format'
+---
+
+<Base
+  title="Instituições"
+  description="Todos os bancos, financeiras, cooperativas e instituições supervisionadas pelo Banco Central, com porte, solidez e reclamações."
+>
+  <PageHeader
+    eyebrow={`IF.data · ${meta.ifdata}`}
+    title="Instituições"
+    subtitle={`${meta.totais.instituicoes.toLocaleString('pt-BR')} conglomerados e instituições independentes, somando ${reaisCompacto(meta.totais.ativoTotal)} em ativos.`}
+  />
+  <div class="mb-6 grid gap-3 text-sm text-muted-foreground md:grid-cols-3">
+    <p class="rounded-none bg-muted/50 p-4">
+      <strong class="text-foreground">Ativo total</strong>: tudo o que a instituição tem (empréstimos, títulos, caixa).
+      É a medida mais comum de tamanho.
+    </p>
+    <p class="rounded-none bg-muted/50 p-4">
+      <strong class="text-foreground">Basileia</strong>: o quanto de capital próprio ela tem em relação ao risco que
+      assume. O mínimo exigido é em torno de 10,5%; quanto maior, mais folga.
+    </p>
+    <p class="rounded-none bg-muted/50 p-4">
+      <strong class="text-foreground">S1 a S5</strong>: o porte usado pelo Banco Central para calibrar as regras. S1 são
+      os maiores; S5, os menores.
+    </p>
+  </div>
+  <InstitutionsExplorer client:load itens={listaInstituicoes} />
+</Base>

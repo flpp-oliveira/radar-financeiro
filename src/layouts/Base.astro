@@ -1,0 +1,122 @@
+---
+import '@/styles/global.css'
+import Logo from '@/components/Logo.astro'
+import { SearchCommand } from '@/components/SearchCommand'
+import { ThemeToggle } from '@/components/ThemeToggle'
+import { MobileNav } from '@/components/MobileNav'
+import { NAV, url } from '@/lib/url'
+import { meta } from '@/lib/data'
+
+interface Props {
+  title: string
+  description?: string
+}
+const {
+  title,
+  description = 'Dados públicos do Banco Central sobre bancos, financeiras, cooperativas e o Pix: tamanho, saúde financeira, reclamações, tarifas e juros.',
+} = Astro.props
+const atual = Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ''), '') || '/'
+const tituloCompleto = title === 'Radar Financeiro' ? title : `${title} · Radar Financeiro`
+const atualizado = new Date(meta.geradoEm).toLocaleDateString('pt-BR')
+const beacon = import.meta.env.PUBLIC_CF_BEACON_TOKEN
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href={url('/favicon.svg')} />
+    <title>{tituloCompleto}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={tituloCompleto} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta name="generator" content={Astro.generator} />
+    <!-- Tema antes de pintar a página (evita o "piscar" claro→escuro). -->
+    <script is:inline>
+      try {
+        const salvo = localStorage.getItem('tema')
+        const escuro = salvo ? salvo === 'escuro' : matchMedia('(prefers-color-scheme: dark)').matches
+        document.documentElement.classList.toggle('dark', escuro)
+      } catch {}
+    </script>
+    {
+      /* Cloudflare Web Analytics (sem cookies): só entra se o token for definido no build. */
+      beacon && (
+        <script
+          is:inline
+          defer
+          src="https://static.cloudflareinsights.com/beacon.min.js"
+          data-cf-beacon={JSON.stringify({ token: beacon })}
+        />
+      )
+    }
+  </head>
+  <body class="min-h-screen">
+      <header class="sticky top-0 z-40 border-b bg-background/75 backdrop-blur-lg">
+        <div class="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6">
+          <MobileNav client:idle atual={atual} />
+          <a href={url('/')} aria-label="Radar Financeiro — início" class="rounded-none">
+            <!-- A visibilidade fica no wrapper: o Logo já define display (inline-flex). -->
+            <span class="hidden sm:inline"><Logo /></span>
+            <span class="sm:hidden"><Logo compact /></span>
+          </a>
+          <nav class="ml-6 hidden items-center gap-1 md:flex">
+            {
+              NAV.map((item) => (
+                <a
+                  href={url(item.href)}
+                  class:list={[
+                    'rounded-none px-3 py-1.5 text-sm transition-colors',
+                    atual.startsWith(item.href)
+                      ? 'bg-primary/10 font-medium text-primary'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  ]}
+                >
+                  {item.label}
+                </a>
+              ))
+            }
+          </nav>
+          <div class="ml-auto flex flex-1 items-center justify-end gap-2 md:flex-none">
+            <div class="max-w-64 flex-1 md:flex-none">
+              <SearchCommand client:idle />
+            </div>
+            <ThemeToggle client:idle />
+          </div>
+        </div>
+      </header>
+
+      <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
+        <slot />
+      </main>
+
+      <footer class="mt-16 border-t">
+        <div class="mx-auto grid max-w-7xl gap-8 px-4 py-10 text-sm text-muted-foreground sm:px-6 md:grid-cols-3">
+          <div class="space-y-3">
+            <Logo />
+            <p class="max-w-xs">
+              Dados públicos do Banco Central sobre o sistema financeiro, organizados para qualquer pessoa entender.
+            </p>
+          </div>
+          <div class="space-y-2">
+            <p class="font-medium text-foreground">Fontes</p>
+            <p>IF.data {meta.ifdata} · Reclamações {meta.reclamacoes} · Pix {meta.pix}</p>
+            <p>
+              Todos os dados vêm do <a class="underline underline-offset-4 hover:text-foreground" href="https://dadosabertos.bcb.gov.br" target="_blank" rel="noreferrer">Portal de Dados Abertos do Banco Central</a> (licença ODbL).
+            </p>
+            <p>Atualizado em {atualizado}.</p>
+          </div>
+          <div class="space-y-2">
+            <p class="font-medium text-foreground">Aviso</p>
+            <p>
+              Projeto independente, sem vínculo com o Banco Central. As informações não são recomendação de investimento
+              ou de escolha de instituição.
+            </p>
+            <a class="underline underline-offset-4 hover:text-foreground" href={url('/sobre')}>Metodologia e fontes</a>
+          </div>
+        </div>
+      </footer>
+  </body>
+</html>

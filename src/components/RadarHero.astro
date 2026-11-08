@@ -1,0 +1,43 @@
+---
+// Radar decorativo do topo da página inicial: anéis, varredura girando e
+// "blips" que acendem em sequência (só CSS, sem JavaScript).
+const blips = [
+  { x: 68, y: 26, d: '0.4s' },
+  { x: 30, y: 38, d: '1.3s' },
+  { x: 74, y: 64, d: '2.1s' },
+  { x: 42, y: 76, d: '2.9s' },
+  { x: 56, y: 44, d: '3.5s' },
+]
+---
+
+<div class="relative aspect-square w-full max-w-md" aria-hidden="true">
+  <div class="absolute inset-0 rounded-full bg-radial from-primary/15 via-primary/5 to-transparent blur-2xl"></div>
+  <svg viewBox="0 0 100 100" class="absolute inset-0 size-full">
+    {[48, 36, 24, 12].map((r) => <circle cx="50" cy="50" r={r} class="fill-none stroke-primary/25" stroke-width="0.4" />)}
+    <path d="M50 2v96M2 50h96" class="stroke-primary/15" stroke-width="0.3" />
+    <path d="M16 16l68 68M84 16l-68 68" class="stroke-primary/10" stroke-width="0.25" />
+  </svg>
+  <!-- Recorte circular: girando, as pontas do quadrado do SVG passariam da
+       borda e criariam rolagem horizontal na página. -->
+  <div class="absolute inset-0 overflow-hidden rounded-full">
+  <svg viewBox="0 0 100 100" class="absolute inset-0 size-full origin-center animate-radar-sweep motion-reduce:animate-none">
+    <defs>
+      <linearGradient id="hero-sweep" x1="50" y1="50" x2="50" y2="2" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="var(--color-info)" stop-opacity="0.55" />
+        <stop offset="1" stop-color="var(--color-info)" stop-opacity="0" />
+      </linearGradient>
+    </defs>
+    <path d="M50 50 L50 2 A48 48 0 0 1 83.9 16.1 Z" fill="url(#hero-sweep)" />
+    <path d="M50 50 L50 2" class="stroke-info" stroke-width="0.5" />
+  </svg>
+  </div>
+  {
+    blips.map((b) => (
+      <span
+        class="absolute size-2.5 -translate-x-1/2 -translate-y-1/2 animate-radar-ping rounded-full bg-info shadow-[0_0_14px] shadow-info motion-reduce:animate-none"
+        style={`left:${b.x}%;top:${b.y}%;animation-delay:${b.d}`}
+      />
+    ))
+  }
+  <span class="absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary"></span>
+</div>

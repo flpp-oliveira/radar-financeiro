@@ -1,0 +1,191 @@
+---
+import Base from '@/layouts/Base.astro'
+import PageHeader from '@/components/PageHeader.astro'
+import Stat from '@/components/Stat.astro'
+import { PixChart } from '@/components/PixChart'
+import { dataBR, pix } from '@/lib/data'
+import { decimal, inteiro, percentual, quantidadeCompacta, reais, reaisCompacto } from '@/lib/format'
+import { ShieldAlert } from 'lucide-react'
+
+const ultimo = pix.serie.at(-1)!
+const anterior = pix.serie.at(-2)
+const crescimento = anterior ? ultimo.quantidade / anterior.quantidade - 1 : null
+const ticket = ultimo.valor / ultimo.quantidade
+
+const NATUREZAS: Record<string, string> = {
+  P2P: 'Pessoa → pessoa',
+  P2B: 'Pessoa → empresa',
+  B2P: 'Empresa → pessoa',
+  B2B: 'Empresa → empresa',
+  P2G: 'Pessoa → governo',
+  B2G: 'Empresa → governo',
+  G2P: 'Governo → pessoa',
+  G2B: 'Governo → empresa',
+  G2G: 'Governo → governo',
+}
+const naturezas = Object.entries(ultimo.porNatureza)
+  .filter(([k]) => NATUREZAS[k])
+  .map(([k, v]) => ({ label: NATUREZAS[k], ...v, parte: v.quantidade / ultimo.quantidade }))
+  .sort((a, b) => b.quantidade - a.quantidade)
+
+const TIPOS_CHAVE: Record<string, string> = { Aleatória: 'Aleatória', CPF: 'CPF', 'e-mail': 'E-mail', Celular: 'Celular', CNPJ: 'CNPJ' }
+const chaves = Object.entries(pix.chaves.porTipo)
+  .map(([k, v]) => ({ label: TIPOS_CHAVE[k] ?? k, valor: v, parte: v / pix.chaves.total }))
+  .sort((a, b) => b.valor - a.valor)
+
+// Fraude: o último mês da série pode não ter as estatísticas ainda.
+const comFraude = pix.serie.filter((m) => m.fraude.aceitasPor100mil != null)
+const fraude = comFraude.at(-1)
+---
+
+<Base
+  title="Pix"
+  description="Quantas transações Pix o Brasil faz por mês, quanto movimenta, para quê, e quantas contestações por fraude são aceitas. Dados do Banco Central."
+>
+  <PageHeader
+    eyebrow={`Banco Central · até ${ultimo.label}`}
+    title="Pix"
+    subtitle="O meio de pagamento mais usado do país em números: volume, valores, quem paga quem e como andam as contestações por fraude."
+  />
+
+  <section class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <Stat
+      label={`Transações em ${ultimo.label}`}
+      value={Number((ultimo.quantidade / 1e9).toFixed(2))}
+      decimals={2}
+      suffix=" bi"
+      hint={crescimento != null ? `${crescimento >= 0 ? '+' : ''}${percentual(crescimento)} sobre o mês anterior` : undefined}
+      beam
+    />
+    <Stat
+      label="Valor movimentado"
+      prefix="R$ "
+      value={Number((ultimo.valor / 1e12).toFixed(2))}
+      decimals={2}
+      suffix=" tri"
+      hint={`em ${ultimo.label}`}
+    />
+    <Stat label="Valor médio por Pix" prefix="R$ " value={Math.round(ticket)} hint="Ticket médio do mês" />
+    <Stat
+      label="Chaves cadastradas"
+      value={Number((pix.chaves.total / 1e9).toFixed(2))}
+      decimals={2}
+      suffix=" bi"
+      hint={`Posição em ${dataBR(pix.chaves.data)}`}
+    />
+  </section>
+
+  <section class="mt-6 grid gap-6 lg:grid-cols-2">
+    <div class="rounded-none bg-card p-6 ring-1 ring-foreground/10">
+      <h2 class="font-heading text-lg font-semibold">Transações por mês</h2>
+      <p class="text-sm text-muted-foreground">Quantidade, últimos {pix.serie.length} meses</p>
+      <div class="mt-4">
+        <PixChart client:visible dados={pix.serie.map((m) => ({ label: m.label, valor: m.quantidade }))} />
+      </div>
+    </div>
+    <div class="rounded-none bg-card p-6 ring-1 ring-foreground/10">
+      <h2 class="font-heading text-lg font-semibold">Valor movimentado por mês</h2>
+      <p class="text-sm text-muted-foreground">Em reais, últimos {pix.serie.length} meses</p>
+      <div class="mt-4">
+        <PixChart client:visible formato="reais" cor="var(--chart-2)" dados={pix.serie.map((m) => ({ label: m.label, valor: m.valor }))} />
+      </div>
+    </div>
+  </section>
+
+  <section class="mt-6 grid gap-6 lg:grid-cols-2">
+    <div class="rounded-none bg-card p-6 ring-1 ring-foreground/10">
+      <h2 class="font-heading text-lg font-semibold">Quem paga quem</h2>
+      <p class="text-sm text-muted-foreground">Participação na quantidade de transações, {ultimo.label}</p>
+      <ul class="mt-5 space-y-3">
+        {
+          naturezas.map((n) => (
+            <li>
+              <div class="flex items-baseline justify-between gap-3 text-sm">
+                <span class="font-medium">{n.label}</span>
+                <span class="text-muted-foreground tabular">
+                  {percentual(n.parte)} · {quantidadeCompacta(n.quantidade)}
+                </span>
+              </div>
+              <div class="mt-1.5 h-2 overflow-hidden bg-muted">
+                <div class="h-full bg-linear-to-r from-primary to-info" style={`width:${Math.max(n.parte * 100, 0.5)}%`} />
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+    <div class="rounded-none bg-card p-6 ring-1 ring-foreground/10">
+      <h2 class="font-heading text-lg font-semibold">Tipos de chave</h2>
+      <p class="text-sm text-muted-foreground">{inteiro(pix.chaves.total)} chaves em {dataBR(pix.chaves.data)}</p>
+      <ul class="mt-5 space-y-3">
+        {
+          chaves.map((c) => (
+            <li>
+              <div class="flex items-baseline justify-between gap-3 text-sm">
+                <span class="font-medium">{c.label}</span>
+                <span class="text-muted-foreground tabular">
+                  {percentual(c.parte)} · {quantidadeCompacta(c.valor)}
+                </span>
+              </div>
+              <div class="mt-1.5 h-2 overflow-hidden bg-muted">
+                <div class="h-full bg-linear-to-r from-info to-ok" style={`width:${c.parte * 100}%`} />
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="mt-5 text-sm text-muted-foreground">
+        A chave aleatória lidera: é a opção de quem não quer expor CPF, telefone ou e-mail.
+      </p>
+    </div>
+  </section>
+
+  {
+    fraude && (
+      <section class="mt-6 rounded-none bg-card p-6 ring-1 ring-foreground/10">
+        <h2 class="flex items-center gap-2 font-heading text-lg font-semibold">
+          <ShieldAlert className="size-5 text-warn" /> Contestações por fraude
+        </h2>
+        <p class="text-sm text-muted-foreground">
+          Pedidos de devolução por golpe ou fraude, pelo Mecanismo Especial de Devolução (MED). Último mês com dados:{' '}
+          {fraude.label}.
+        </p>
+        <div class="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div class="rounded-none bg-muted/50 p-4">
+            <p class="text-xs text-muted-foreground">Pix contestados</p>
+            <p class="mt-1 font-heading text-2xl font-semibold tabular">{quantidadeCompacta(fraude.fraude.contestados)}</p>
+          </div>
+          <div class="rounded-none bg-muted/50 p-4">
+            <p class="text-xs text-muted-foreground">Contestações aceitas</p>
+            <p class="mt-1 font-heading text-2xl font-semibold tabular">{quantidadeCompacta(fraude.fraude.aceitas)}</p>
+            <p class="text-xs text-muted-foreground">{decimal(fraude.fraude.aceitasPor100mil, 1)} a cada 100 mil Pix</p>
+          </div>
+          <div class="rounded-none bg-muted/50 p-4">
+            <p class="text-xs text-muted-foreground">Valor das aceitas</p>
+            <p class="mt-1 font-heading text-2xl font-semibold tabular">{reaisCompacto(fraude.fraude.valorAceito)}</p>
+          </div>
+          <div class="rounded-none bg-muted/50 p-4">
+            <p class="text-xs text-muted-foreground">Devolvidos integralmente</p>
+            <p class="mt-1 font-heading text-2xl font-semibold tabular">{quantidadeCompacta(fraude.fraude.devolvidosMed)}</p>
+            <p class="text-xs text-muted-foreground">{reais(fraude.fraude.valorDevolvidoMed)}</p>
+          </div>
+        </div>
+        <div class="mt-6">
+          <p class="text-sm font-medium">Contestações aceitas a cada 100 mil Pix</p>
+          <PixChart
+            client:visible
+            tipo="barra"
+            formato="quantidade"
+            cor="var(--chart-4)"
+            altura={220}
+            dados={comFraude.map((m) => ({ label: m.label, valor: m.fraude.aceitasPor100mil ?? 0 }))}
+          />
+        </div>
+        <p class="mt-4 text-sm text-muted-foreground">
+          Caiu em golpe? Peça a devolução pelo seu banco o quanto antes: o MED só funciona se a contestação for feita
+          rapidamente.
+        </p>
+      </section>
+    )
+  }
+</Base>

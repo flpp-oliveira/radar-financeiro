@@ -1,0 +1,34 @@
+---
+import Base from '@/layouts/Base.astro'
+import PageHeader from '@/components/PageHeader.astro'
+import { ComplaintsRanking } from '@/components/ComplaintsRanking'
+import { reclamacoes } from '@/lib/data'
+---
+
+<Base
+  title="Ranking de reclamações"
+  description="Quais bancos e financeiras mais recebem reclamações procedentes no Banco Central, proporcionalmente ao número de clientes."
+>
+  <PageHeader
+    eyebrow={`Banco Central · ${reclamacoes.periodo}`}
+    title="Ranking de reclamações"
+    subtitle="Quais instituições mais recebem reclamações procedentes no Banco Central, proporcionalmente ao número de clientes."
+  />
+
+  <div class="mb-8 grid gap-3 text-sm text-muted-foreground md:grid-cols-3">
+    <p class="rounded-none bg-muted/50 p-4">
+      <strong class="text-foreground">Índice</strong>: reclamações procedentes para cada 1 milhão de clientes. Permite
+      comparar instituições de tamanhos diferentes.
+    </p>
+    <p class="rounded-none bg-muted/50 p-4">
+      <strong class="text-foreground">Procedente</strong>: quando o Banco Central conclui que a instituição descumpriu
+      alguma regra ou lei.
+    </p>
+    <p class="rounded-none bg-muted/50 p-4">
+      <strong class="text-foreground">1º lugar</strong> = a mais reclamada. O BCB separa as 15 maiores (por clientes) das
+      demais.
+    </p>
+  </div>
+
+  <ComplaintsRanking client:load itens={reclamacoes.itens} />
+</Base>

@@ -1,0 +1,114 @@
+---
+import Base from '@/layouts/Base.astro'
+import PageHeader from '@/components/PageHeader.astro'
+import { dataBR, meta } from '@/lib/data'
+
+const fontes = [
+  {
+    nome: 'IF.data — dados selecionados de instituições financeiras',
+    uso: 'Cadastro, porte (segmento S1–S5), ativo total, carteira de crédito, patrimônio, lucro, índice de Basileia.',
+    periodo: meta.ifdata,
+    link: 'https://olinda.bcb.gov.br/olinda/servico/IFDATA/versao/v1/documentacao',
+  },
+  {
+    nome: 'Ranking de instituições por índice de reclamações',
+    uso: 'Índice, reclamações procedentes e número de clientes, por conglomerado.',
+    periodo: meta.reclamacoes,
+    link: 'https://www3.bcb.gov.br/ranking/',
+  },
+  {
+    nome: 'Taxas de juros de operações de crédito',
+    uso: 'Taxas médias praticadas por instituição, por modalidade (ranking semanal).',
+    periodo: `${dataBR(meta.juros.inicio)} a ${dataBR(meta.juros.fim)}`,
+    link: 'https://olinda.bcb.gov.br/olinda/servico/taxaJuros/versao/v2/documentacao',
+  },
+  {
+    nome: 'Tarifas bancárias por instituição',
+    uso: 'Valor máximo de cada serviço para pessoa física.',
+    periodo: 'vigentes na coleta',
+    link: 'https://olinda.bcb.gov.br/olinda/servico/Informes_ListaTarifasPorInstituicaoFinanceira/versao/v1/documentacao',
+  },
+  {
+    nome: 'Estatísticas do Pix',
+    uso: 'Transações por mês, natureza (quem paga quem), chaves cadastradas e contestações por fraude (MED).',
+    periodo: `até ${meta.pix}`,
+    link: 'https://olinda.bcb.gov.br/olinda/servico/Pix_DadosAbertos/versao/v1/documentacao',
+  },
+]
+---
+
+<Base title="Sobre" description="Fontes, metodologia e limitações do Radar Financeiro.">
+  <PageHeader
+    eyebrow="Metodologia"
+    title="Sobre o Radar Financeiro"
+    subtitle="Um projeto independente que organiza dados públicos do Banco Central para qualquer pessoa entender o sistema financeiro."
+  />
+
+  <div class="grid gap-10 lg:grid-cols-[2fr_1fr]">
+    <div class="space-y-10">
+      <section>
+        <h2 class="font-heading text-xl font-semibold">Fontes</h2>
+        <p class="mt-1 text-muted-foreground">
+          Todos os números vêm do <a class="text-primary hover:underline" href="https://dadosabertos.bcb.gov.br" target="_blank" rel="noreferrer">Portal de Dados Abertos do Banco Central</a>,
+          publicados sob a licença ODbL.
+        </p>
+        <ul class="mt-5 space-y-3">
+          {
+            fontes.map((f) => (
+              <li class="rounded-none bg-card p-5 ring-1 ring-foreground/10">
+                <div class="flex flex-wrap items-baseline justify-between gap-2">
+                  <a href={f.link} target="_blank" rel="noreferrer" class="font-medium hover:text-primary">
+                    {f.nome}
+                  </a>
+                  <span class="text-xs text-muted-foreground">{f.periodo}</span>
+                </div>
+                <p class="mt-1 text-sm text-muted-foreground">{f.uso}</p>
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+
+      <section class="space-y-3">
+        <h2 class="font-heading text-xl font-semibold">Como os dados são ligados</h2>
+        <p class="text-muted-foreground">
+          Cada página de instituição corresponde a um <strong class="text-foreground">conglomerado prudencial</strong> ou a
+          uma instituição independente, como no IF.data. Tarifas, juros e chaves Pix vêm por instituição individual (CNPJ)
+          e são atribuídos ao conglomerado pelo cadastro do próprio Banco Central. O ranking de reclamações vem por nome do
+          conglomerado e é ligado pelo nome.
+        </p>
+        <p class="text-muted-foreground">
+          Por isso, num grupo como o Itaú, as taxas de juros podem aparecer várias vezes, uma para cada empresa do grupo
+          (banco, financeira de cartões…), e as tarifas mostradas são as da empresa do grupo com a tabela mais completa.
+        </p>
+      </section>
+
+      <section class="space-y-3">
+        <h2 class="font-heading text-xl font-semibold">Limitações</h2>
+        <ul class="list-disc space-y-2 pl-5 text-muted-foreground">
+          <li>Os dados têm defasagem: o IF.data é trimestral e sai cerca de dois meses depois do fechamento.</li>
+          <li>Taxas de juros são médias praticadas; a taxa oferecida a você depende do seu perfil.</li>
+          <li>Tarifas são valores máximos informados ao Banco Central; pacotes e isenções podem mudar o custo real.</li>
+          <li>Instituições de pagamento não informam tarifas ao Banco Central e muitas não aparecem no IF.data.</li>
+        </ul>
+      </section>
+    </div>
+
+    <aside class="space-y-4">
+      <div class="rounded-none bg-warn/10 p-5 ring-1 ring-warn/30">
+        <p class="font-medium">Aviso</p>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Projeto independente, sem vínculo com o Banco Central do Brasil. As informações têm caráter educativo e não são
+          recomendação de investimento ou de escolha de instituição.
+        </p>
+      </div>
+      <div class="rounded-none bg-card p-5 ring-1 ring-foreground/10">
+        <p class="font-medium">Atualização</p>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Os dados são coletados automaticamente e o site é reconstruído toda semana. Última coleta:{' '}
+          {new Date(meta.geradoEm).toLocaleString('pt-BR')}.
+        </p>
+      </div>
+    </aside>
+  </div>
+</Base>

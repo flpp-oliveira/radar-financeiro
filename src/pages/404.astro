@@ -1,0 +1,22 @@
+---
+import Base from '@/layouts/Base.astro'
+import { url } from '@/lib/url'
+---
+
+<Base title="Página não encontrada" description="Esta página não existe no Radar Financeiro.">
+  <div class="mx-auto max-w-xl py-20 text-center">
+    <p class="text-xs font-medium tracking-widest text-primary uppercase">Erro 404</p>
+    <h1 class="mt-3 font-heading text-4xl font-bold tracking-tight">Nada no radar por aqui</h1>
+    <p class="mt-4 text-muted-foreground">
+      A página que você procurou não existe ou mudou de endereço. Use a busca no topo ou volte ao início.
+    </p>
+    <div class="mt-8 flex justify-center gap-3">
+      <a href={url('/')} class="inline-flex h-11 items-center bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+        Voltar ao início
+      </a>
+      <a href={url('/instituicoes')} class="inline-flex h-11 items-center px-5 text-sm font-medium ring-1 ring-foreground/15 hover:bg-muted">
+        Ver instituições
+      </a>
+    </div>
+  </div>
+</Base>

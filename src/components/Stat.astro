@@ -1,0 +1,26 @@
+---
+// Número em destaque com contagem animada (NumberTicker, Magic UI) e um
+// pequeno brilho na borda (BorderBeam) opcional.
+import { NumberTicker } from '@/components/ui/number-ticker'
+import { BorderBeam } from '@/components/ui/border-beam'
+
+interface Props {
+  label: string
+  value: number
+  decimals?: number
+  prefix?: string
+  suffix?: string
+  hint?: string
+  beam?: boolean
+}
+const { label, value, decimals = 0, prefix = '', suffix = '', hint, beam = false } = Astro.props
+---
+
+<div class="relative overflow-hidden rounded-none bg-card p-5 ring-1 ring-foreground/10">
+  <p class="text-sm text-muted-foreground">{label}</p>
+  <p class="mt-2 font-heading text-3xl font-semibold tracking-tight tabular sm:text-4xl">
+    {prefix}<NumberTicker client:visible value={value} decimalPlaces={decimals} />{suffix}
+  </p>
+  {hint && <p class="mt-1 text-xs text-muted-foreground">{hint}</p>}
+  {beam && <BorderBeam client:visible size={90} duration={9} colorFrom="var(--color-primary)" colorTo="var(--color-info)" />}
+</div>

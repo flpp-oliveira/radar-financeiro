@@ -1,0 +1,350 @@
+---
+import Base from '@/layouts/Base.astro'
+import PageHeader from '@/components/PageHeader.astro'
+import { Badge } from '@/components/ui/badge'
+import { instituicoes, juros as jurosData, meta, reclamacoes as reclamacoesData, type Instituicao } from '@/lib/data'
+import { BASILEIA_MINIMO, medianaTarifa, totalPorModalidade } from '@/lib/mercado'
+import { decimal, inteiro, percentual, quantidadeCompacta, reais, reaisCompacto, taxa } from '@/lib/format'
+import { url } from '@/lib/url'
+import { ArrowLeft, Building2, FileWarning, KeyRound, Percent, ReceiptText, ShieldCheck } from 'lucide-react'
+
+export function getStaticPaths() {
+  return instituicoes.map((inst) => ({ params: { slug: inst.slug }, props: { inst } }))
+}
+
+const { inst } = Astro.props as { inst: Instituicao }
+const ind = inst.indicadores
+const total = meta.totais.instituicoes
+
+// Basileia: folga sobre o mínimo regulatório (~10,5% com adicionais de capital).
+const basileia = ind.indiceBasileia ?? null
+const basileiaEscala = 0.35 // a barra vai de 0% a 35%
+const basileiaLeitura =
+  basileia == null
+    ? null
+    : basileia >= 0.2
+      ? 'muito acima do mínimo exigido'
+      : basileia >= 0.14
+        ? 'confortavelmente acima do mínimo'
+        : basileia >= BASILEIA_MINIMO
+          ? 'acima do mínimo, com pouca folga'
+          : 'abaixo da referência de 10,5%'
+
+const rec = inst.reclamacoes
+const juros = [...(inst.juros ?? [])].sort(
+  (a, b) => a.segmento.localeCompare(b.segmento) || a.modalidade.localeCompare(b.modalidade) || a.taxaMes - b.taxaMes,
+)
+const tarifas = inst.tarifas?.itens ?? []
+
+const porte =
+  inst.rankingAtivo <= 10
+    ? 'uma das 10 maiores instituições do país'
+    : inst.rankingAtivo <= 50
+      ? 'entre as 50 maiores do país'
+      : inst.rankingAtivo <= 200
+        ? 'de porte médio no sistema'
+        : 'de porte pequeno no sistema'
+
+const kpis = [
+  { label: 'Ativo total', valor: reaisCompacto(ind.ativoTotal), hint: `${inst.rankingAtivo}º maior de ${inteiro(total)}` },
+  { label: 'Carteira de crédito', valor: reaisCompacto(ind.carteiraCredito), hint: 'Empréstimos e financiamentos' },
+  { label: 'Patrimônio líquido', valor: reaisCompacto(ind.patrimonioLiquido), hint: 'Capital dos donos' },
+  { label: 'Lucro líquido', valor: reaisCompacto(ind.lucroLiquido), hint: `Acumulado no semestre até ${meta.ifdata}` },
+  { label: 'Captações', valor: reaisCompacto(ind.captacoes), hint: 'Depósitos e outros recursos captados' },
+  { label: 'Índice de imobilização', valor: percentual(ind.indiceImobilizacao), hint: 'Limite legal: 50%' },
+]
+
+const secoes = [
+  { id: 'indicadores', label: 'Indicadores' },
+  rec && { id: 'reclamacoes', label: 'Reclamações' },
+  juros.length > 0 && { id: 'juros', label: 'Juros' },
+  tarifas.length > 0 && { id: 'tarifas', label: 'Tarifas' },
+].filter(Boolean) as { id: string; label: string }[]
+---
+
+<Base
+  title={inst.nome}
+  description={`${inst.nome}: porte, solidez (Basileia), reclamações no Banco Central, juros praticados e tarifas. Dados oficiais do BCB.`}
+>
+  <a href={url('/instituicoes')} class="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+    <ArrowLeft className="size-4" /> Instituições
+  </a>
+
+  <PageHeader
+    eyebrow={`${inst.tipoNome}${inst.segmento ? ` · Segmento ${inst.segmento}` : ''}`}
+    title={inst.nome}
+    subtitle={[
+      inst.nomeOficial !== inst.nome ? `No Banco Central: ${inst.nomeOficial}` : null,
+      inst.municipio && inst.uf ? `${inst.municipio} (${inst.uf})` : null,
+      inst.conglomerado ? 'Conglomerado' : 'Instituição independente',
+      inst.inicioAtividade && Number(inst.inicioAtividade) > 1900 && inst.inicioAtividade !== '2000' ? `em atividade desde ${inst.inicioAtividade}` : null,
+      inst.cnpj8 ? `CNPJ ${inst.cnpj8.replace(/^(\d{2})(\d{3})(\d{3})$/, '$1.$2.$3')}` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ')}
+  >
+    <div class="mt-5 flex flex-wrap gap-2">
+      {secoes.map((s) => (
+        <a href={`#${s.id}`} class="rounded-none bg-background/70 px-3 py-1 text-sm ring-1 ring-foreground/10 hover:bg-muted">
+          {s.label}
+        </a>
+      ))}
+    </div>
+  </PageHeader>
+
+  <!-- Em resumo (linguagem simples) -->
+  <section class="mb-8 rounded-none bg-primary/5 p-6 ring-1 ring-primary/20">
+    <h2 class="flex items-center gap-2 font-heading text-lg font-semibold">
+      <Building2 className="size-5 text-primary" /> Em resumo
+    </h2>
+    <ul class="mt-3 space-y-2 text-[15px] leading-relaxed">
+      <li>
+        <strong>Tamanho:</strong> é {porte}, com {reaisCompacto(ind.ativoTotal)} em ativos ({inst.rankingAtivo}º de {inteiro(total)}).
+      </li>
+      {
+        basileia != null && (
+          <li>
+            <strong>Solidez:</strong> índice de Basileia de {percentual(basileia)}, {basileiaLeitura}.
+          </li>
+        )
+      }
+      {
+        rec && rec.indice != null && (
+          <li>
+            <strong>Reclamações:</strong> {rec.posicao}ª mais reclamada entre {rec.total}{' '}
+            {rec.categoria === 'top15' ? 'grandes instituições' : 'instituições de menor porte'} no {reclamacoesData.periodo},
+            com {inteiro(rec.procedentes)} reclamações procedentes.
+          </li>
+        )
+      }
+      {
+        inst.chavesPix ? (
+          <li>
+            <strong>Pix:</strong> {quantidadeCompacta(inst.chavesPix)} de chaves cadastradas.
+          </li>
+        ) : null
+      }
+      {
+        tarifas.length > 0 && (
+          <li>
+            <strong>Tarifas:</strong> {tarifas.length} serviços com tarifa informada ao Banco Central.
+          </li>
+        )
+      }
+    </ul>
+  </section>
+
+  <!-- Indicadores -->
+  <section id="indicadores" class="scroll-mt-24">
+    <h2 class="font-heading text-2xl font-semibold tracking-tight">Indicadores financeiros</h2>
+    <p class="mt-1 text-sm text-muted-foreground">IF.data, {meta.ifdata}. Valores do conglomerado prudencial quando aplicável.</p>
+    <div class="mt-5 grid gap-3 lg:grid-cols-[1fr_1.4fr]">
+      <!-- Basileia -->
+      <div class="rounded-none bg-card p-6 ring-1 ring-foreground/10">
+        <div class="flex items-center gap-2 text-sm text-muted-foreground">
+          <ShieldCheck className="size-4" /> Índice de Basileia
+        </div>
+        <p class="mt-2 font-heading text-4xl font-semibold tabular">{percentual(basileia)}</p>
+        {
+          basileia != null && (
+            <>
+              <div class="relative mt-5 h-3 bg-muted">
+                <div
+                  class:list={[
+                    'h-full',
+                    basileia >= 0.14 ? 'bg-ok' : basileia >= BASILEIA_MINIMO ? 'bg-warn' : 'bg-destructive',
+                  ]}
+                  style={`width:${Math.min(basileia / basileiaEscala, 1) * 100}%`}
+                />
+                <div
+                  class="absolute -top-1 h-5 w-0.5 bg-foreground/70"
+                  style={`left:${(BASILEIA_MINIMO / basileiaEscala) * 100}%`}
+                  title="Referência mínima de 10,5%"
+                />
+              </div>
+              <div class="mt-1.5 flex justify-between text-xs text-muted-foreground">
+                <span>0%</span>
+                <span style={`margin-left:${(BASILEIA_MINIMO / basileiaEscala) * 100 - 12}%`}>mínimo ~10,5%</span>
+                <span>35%+</span>
+              </div>
+            </>
+          )
+        }
+        <p class="mt-4 text-sm text-muted-foreground">
+          Mede o capital próprio em relação aos riscos assumidos. Quanto maior, mais preparada a instituição está para
+          absorver perdas.
+        </p>
+      </div>
+      <!-- KPIs -->
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {
+          kpis.map((k) => (
+            <div class="rounded-none bg-card p-4 ring-1 ring-foreground/10">
+              <p class="text-xs text-muted-foreground">{k.label}</p>
+              <p class="mt-1.5 font-heading text-xl font-semibold tabular">{k.valor}</p>
+              <p class="mt-1 text-xs text-muted-foreground">{k.hint}</p>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Reclamações -->
+  {
+    rec && (
+      <section id="reclamacoes" class="mt-12 scroll-mt-24">
+        <h2 class="flex items-center gap-2 font-heading text-2xl font-semibold tracking-tight">
+          <FileWarning className="size-6 text-warn" /> Reclamações
+        </h2>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Ranking do Banco Central, {reclamacoesData.periodo}.{' '}
+          <a class="text-primary hover:underline" href={url('/reclamacoes')}>
+            Ver ranking completo
+          </a>
+        </p>
+        <div class="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div class="rounded-none bg-card p-4 ring-1 ring-foreground/10">
+            <p class="text-xs text-muted-foreground">Posição</p>
+            <p class="mt-1.5 font-heading text-2xl font-semibold">
+              {rec.posicao ? `${rec.posicao}º` : '—'}
+              <span class="text-base font-normal text-muted-foreground"> de {rec.total ?? '—'}</span>
+            </p>
+            <p class="mt-1 text-xs text-muted-foreground">{rec.categoria === 'top15' ? 'Entre as 15 maiores' : 'Demais instituições'} (1º = mais reclamada)</p>
+          </div>
+          <div class="rounded-none bg-card p-4 ring-1 ring-foreground/10">
+            <p class="text-xs text-muted-foreground">Índice</p>
+            <p class="mt-1.5 font-heading text-2xl font-semibold tabular">{rec.indice != null ? decimal(rec.indice) : '—'}</p>
+            <p class="mt-1 text-xs text-muted-foreground">Procedentes por milhão de clientes</p>
+          </div>
+          <div class="rounded-none bg-card p-4 ring-1 ring-foreground/10">
+            <p class="text-xs text-muted-foreground">Procedentes</p>
+            <p class="mt-1.5 font-heading text-2xl font-semibold tabular">{inteiro(rec.procedentes)}</p>
+            <p class="mt-1 text-xs text-muted-foreground">De {inteiro(rec.respondidas)} respondidas</p>
+          </div>
+          <div class="rounded-none bg-card p-4 ring-1 ring-foreground/10">
+            <p class="text-xs text-muted-foreground">Clientes</p>
+            <p class="mt-1.5 font-heading text-2xl font-semibold tabular">{quantidadeCompacta(rec.clientes)}</p>
+            <p class="mt-1 text-xs text-muted-foreground">Base usada no cálculo</p>
+          </div>
+        </div>
+        {rec.indice == null && (
+          <p class="mt-3 text-sm text-muted-foreground">
+            O Banco Central só calcula o índice para instituições com volume mínimo de reclamações no período.
+          </p>
+        )}
+      </section>
+    )
+  }
+
+  <!-- Juros -->
+  {
+    juros.length > 0 && (
+      <section id="juros" class="mt-12 scroll-mt-24">
+        <h2 class="flex items-center gap-2 font-heading text-2xl font-semibold tracking-tight">
+          <Percent className="size-6 text-info" /> Juros praticados
+        </h2>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Taxas médias efetivamente cobradas, semana de {jurosData.periodo.inicio.split('-').reverse().join('/')} a{' '}
+          {jurosData.periodo.fim.split('-').reverse().join('/')}. Posição 1 = menor taxa.
+        </p>
+        <div class="mt-5 overflow-x-auto rounded-none ring-1 ring-foreground/10">
+          <table class="w-full text-sm">
+            <thead class="bg-muted/50 text-left text-muted-foreground">
+              <tr>
+                <th class="px-4 py-2.5 font-medium">Modalidade</th>
+                <th class="px-4 py-2.5 text-right font-medium">Ao mês</th>
+                <th class="px-4 py-2.5 text-right font-medium">Ao ano</th>
+                <th class="hidden px-4 py-2.5 text-right font-medium sm:table-cell">Posição</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y">
+              {juros.map((j) => (
+                <tr>
+                  <td class="px-4 py-2.5">
+                    <Badge variant="outline" className="mr-2">{j.segmento}</Badge>
+                    {j.modalidade}
+                    {inst.conglomerado && <span class="block text-xs text-muted-foreground">{j.empresa}</span>}
+                  </td>
+                  <td class="px-4 py-2.5 text-right font-medium tabular">{taxa(j.taxaMes)}</td>
+                  <td class="px-4 py-2.5 text-right tabular text-muted-foreground">{taxa(j.taxaAno)}</td>
+                  <td class="hidden px-4 py-2.5 text-right tabular text-muted-foreground sm:table-cell">
+                    {j.posicao}º de {totalPorModalidade.get(`${j.segmento}|${j.modalidade}`) ?? '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    )
+  }
+
+  <!-- Tarifas -->
+  {
+    tarifas.length > 0 && (
+      <section id="tarifas" class="mt-12 scroll-mt-24">
+        <h2 class="flex items-center gap-2 font-heading text-2xl font-semibold tracking-tight">
+          <ReceiptText className="size-6 text-primary" /> Tarifas para pessoa física
+        </h2>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Valores máximos informados ao Banco Central por {inst.tarifas!.instituicao}. A mediana considera todas as
+          instituições que cobram o mesmo serviço.
+        </p>
+        <div class="mt-5 overflow-x-auto rounded-none ring-1 ring-foreground/10">
+          <table class="w-full text-sm">
+            <thead class="bg-muted/50 text-left text-muted-foreground">
+              <tr>
+                <th class="px-4 py-2.5 font-medium">Serviço</th>
+                <th class="px-4 py-2.5 text-right font-medium">Valor</th>
+                <th class="hidden px-4 py-2.5 text-right font-medium md:table-cell">Mediana do mercado</th>
+                <th class="hidden px-4 py-2.5 font-medium lg:table-cell">Cobrança</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y">
+              {tarifas.map((t) => {
+                const med = t.tipoValor === 'Real' ? medianaTarifa.get(t.codigo) : undefined
+                const acima = med != null && t.valor > med * 1.1
+                const abaixo = med != null && t.valor < med * 0.9
+                return (
+                  <tr>
+                    <td class="px-4 py-2.5">{t.servico}</td>
+                    <td class="px-4 py-2.5 text-right font-medium whitespace-nowrap tabular">
+                      {t.tipoValor === 'Real' ? reais(t.valor) : `${decimal(t.valor)}%`}
+                    </td>
+                    <td class="hidden px-4 py-2.5 text-right whitespace-nowrap tabular md:table-cell">
+                      {med != null ? (
+                        <span class:list={[acima && 'text-warn', abaixo && 'text-ok', !acima && !abaixo && 'text-muted-foreground']}>
+                          {reais(med)}
+                          {acima ? ' ↑' : abaixo ? ' ↓' : ''}
+                        </span>
+                      ) : (
+                        <span class="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td class="hidden px-4 py-2.5 text-muted-foreground lg:table-cell">
+                      {t.unidade} · {t.periodicidade}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p class="mt-2 text-xs text-muted-foreground">↑ acima de 10% da mediana · ↓ abaixo de 10% da mediana</p>
+      </section>
+    )
+  }
+
+  {
+    inst.chavesPix ? (
+      <section class="mt-12 flex items-center gap-4 rounded-none bg-card p-5 ring-1 ring-foreground/10">
+        <KeyRound className="size-8 text-info" />
+        <div>
+          <p class="font-heading text-lg font-semibold">{inteiro(inst.chavesPix)} chaves Pix</p>
+          <p class="text-sm text-muted-foreground">Cadastradas nas instituições deste grupo, segundo o Banco Central.</p>
+        </div>
+      </section>
+    ) : null
+  }
+</Base>

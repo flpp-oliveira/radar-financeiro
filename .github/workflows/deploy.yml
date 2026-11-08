@@ -1,0 +1,58 @@
+name: Coletar dados e publicar
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Toda segunda-feira às 06:00 (UTC): busca dados novos no BCB e republica.
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
+      # Coleta os dados abertos do Banco Central (gera src/data/*.json).
+      - run: npm run collect
+        env:
+          NO_CACHE: '1'
+
+      - run: npm run check
+
+      - run: npm run build
+        env:
+          SITE_URL: ${{ vars.SITE_URL || 'https://radar-financeiro.felippeprofissionalsi.workers.dev' }}
+          # Opcional: token do Cloudflare Web Analytics (variável do repositório).
+          PUBLIC_CF_BEACON_TOKEN: ${{ vars.CF_BEACON_TOKEN }}
+
+      # Publica na Cloudflare (Workers + arquivos estáticos). Só fora de PRs e
+      # só se o segredo CLOUDFLARE_API_TOKEN estiver configurado no repositório.
+      - id: token
+        run: echo "ok=${{ secrets.CLOUDFLARE_API_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
+
+      - name: Publicar na Cloudflare
+        if: github.event_name != 'pull_request' && steps.token.outputs.ok == 'true'
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

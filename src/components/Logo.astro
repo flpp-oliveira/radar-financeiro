@@ -1,0 +1,46 @@
+---
+// Marca: um radar (anéis + varredura girando + um "blip") e o nome.
+// A varredura usa a animação radar-sweep definida em global.css.
+interface Props {
+  compact?: boolean
+  class?: string
+}
+const { compact = false, class: className = '' } = Astro.props
+---
+
+<span class:list={['inline-flex items-center gap-2.5', className]}>
+  <span class="relative inline-block size-8 shrink-0">
+    <svg viewBox="0 0 32 32" class="absolute inset-0 size-8" aria-hidden="true">
+      <circle cx="16" cy="16" r="15" class="fill-primary/10 stroke-primary/40" stroke-width="1" />
+      <circle cx="16" cy="16" r="10" class="fill-none stroke-primary/30" stroke-width="1" />
+      <circle cx="16" cy="16" r="5" class="fill-none stroke-primary/30" stroke-width="1" />
+      <path d="M16 1v30M1 16h30" class="stroke-primary/15" stroke-width="1" />
+    </svg>
+    <svg
+      viewBox="0 0 32 32"
+      class="absolute inset-0 size-8 origin-center animate-radar-sweep motion-reduce:animate-none"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="sweep" x1="16" y1="16" x2="16" y2="1" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="var(--color-info)" stop-opacity="0.9" />
+          <stop offset="1" stop-color="var(--color-info)" stop-opacity="0" />
+        </linearGradient>
+      </defs>
+      <path d="M16 16 L16 1 A15 15 0 0 1 26.6 5.4 Z" fill="url(#sweep)" />
+    </svg>
+    <span class="absolute top-[30%] right-[28%] size-1.5 rounded-full bg-info shadow-[0_0_8px] shadow-info"></span>
+  </span>
+  {
+    !compact && (
+      <span class="leading-none">
+        <span class="block font-heading text-[17px] font-bold tracking-tight">
+          Radar <span class="text-primary">Financeiro</span>
+        </span>
+        <span class="mt-1 block text-[10px] font-medium tracking-widest text-muted-foreground uppercase">
+          Dados abertos do Banco Central
+        </span>
+      </span>
+    )
+  }
+</span>

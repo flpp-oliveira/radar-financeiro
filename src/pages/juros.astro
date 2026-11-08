@@ -1,0 +1,28 @@
+---
+import Base from '@/layouts/Base.astro'
+import PageHeader from '@/components/PageHeader.astro'
+import { InterestExplorer } from '@/components/InterestExplorer'
+import { dataBR, juros } from '@/lib/data'
+---
+
+<Base
+  title="Taxas de juros"
+  description="As taxas de juros efetivamente praticadas por cada banco e financeira em cartão de crédito, cheque especial, consignado, veículos e crédito para empresas."
+>
+  <PageHeader
+    eyebrow={`Banco Central · ${dataBR(juros.periodo.inicio)} a ${dataBR(juros.periodo.fim)}`}
+    title="Taxas de juros"
+    subtitle="As taxas médias efetivamente cobradas por cada instituição, por modalidade de crédito. Compare antes de contratar."
+  />
+  <div class="mb-8 grid gap-3 text-sm text-muted-foreground md:grid-cols-2">
+    <p class="rounded-none bg-muted/50 p-4">
+      <strong class="text-foreground">Taxa praticada</strong>: a média das operações fechadas na semana, não a taxa
+      anunciada. A sua pode ser diferente, dependendo do seu perfil.
+    </p>
+    <p class="rounded-none bg-muted/50 p-4">
+      <strong class="text-foreground">Ao mês × ao ano</strong>: os juros se acumulam; 10% ao mês viram mais de 200% ao
+      ano. Sempre olhe o custo total antes de fechar.
+    </p>
+  </div>
+  <InterestExplorer client:load modalidades={juros.modalidades} />
+</Base>

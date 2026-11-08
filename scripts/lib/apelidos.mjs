@@ -1,0 +1,42 @@
+// Nomes populares das instituições mais conhecidas. No Banco Central o
+// Nubank é "NU PAGAMENTOS" e o Banco do Brasil é "BB" — ninguém busca assim.
+// O apelido vira o nome exibido, entra na busca e define o endereço da página.
+//
+// Chave: o nome do IF.data já sem o sufixo " - PRUDENCIAL".
+export const APELIDOS = {
+  ITAU: 'Itaú Unibanco',
+  BB: 'Banco do Brasil',
+  'CAIXA ECONÔMICA FEDERAL': 'Caixa Econômica Federal',
+  BRADESCO: 'Bradesco',
+  SANTANDER: 'Santander',
+  BNDES: 'BNDES',
+  'BTG PACTUAL': 'BTG Pactual',
+  'NU PAGAMENTOS': 'Nubank',
+  XP: 'XP Investimentos',
+  SAFRA: 'Banco Safra',
+  'BCO COOPERATIVO SICREDI': 'Sicredi',
+  'BANCO SICOOB': 'Sicoob',
+  BANRISUL: 'Banrisul',
+  'BANCO C6': 'C6 Bank',
+  CITIBANK: 'Citibank',
+  VOTORANTIM: 'Banco BV',
+  'MERCADO PAGO IP': 'Mercado Pago',
+  'CIELO IP': 'Cielo',
+  'BCO DAYCOVAL S.A': 'Banco Daycoval',
+  'JP MORGAN CHASE': 'J.P. Morgan',
+  INTER: 'Banco Inter',
+  'BCO DO NORDESTE DO BRASIL S.A.': 'Banco do Nordeste',
+  PAGSEGURO: 'PagBank (PagSeguro)',
+  'ABC-BRASIL': 'Banco ABC Brasil',
+  'BCO DA AMAZONIA S.A.': 'Banco da Amazônia',
+  'STONE IP': 'Stone',
+  PICPAY: 'PicPay',
+  AGIBANK: 'Agibank',
+  BMG: 'Banco BMG',
+  'MERCANTIL DO BRASIL': 'Banco Mercantil',
+  BANESTES: 'Banestes',
+  ORIGINAL: 'Banco Original',
+  PINE: 'Banco Pine',
+  'GOLDMAN SACHS': 'Goldman Sachs',
+  'PORTO SEGURO': 'Porto Bank (Porto Seguro)',
+}

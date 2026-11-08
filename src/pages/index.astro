@@ -1,0 +1,223 @@
+---
+import Base from '@/layouts/Base.astro'
+import RadarHero from '@/components/RadarHero.astro'
+import Stat from '@/components/Stat.astro'
+import { ExploreCard } from '@/components/ExploreCard'
+import { PixChart } from '@/components/PixChart'
+import { AnimatedGradientText } from '@/components/ui/animated-gradient-text'
+import { Badge } from '@/components/ui/badge'
+import { instituicoes, juros, meta, pix, reclamacoes } from '@/lib/data'
+import { percentual, quantidadeCompacta, reaisCompacto, taxa } from '@/lib/format'
+import { url } from '@/lib/url'
+import { ArrowRight } from 'lucide-react'
+
+const pixUltimo = pix.serie.at(-1)!
+const maiores = instituicoes.slice(0, 8)
+const maisReclamadas = reclamacoes.itens
+  .filter((r) => r.categoria === 'top15' && r.indice != null)
+  .sort((a, b) => (a.posicao ?? 99) - (b.posicao ?? 99))
+  .slice(0, 5)
+const rotativo = juros.modalidades.find((m) => /rotativo/i.test(m.modalidade))
+const maxReclam = maisReclamadas[0]?.indice ?? 1
+---
+
+<Base title="Radar Financeiro">
+  <!-- Destaque -->
+  <section class="grid items-center gap-10 lg:grid-cols-[1.2fr_1fr]">
+    <div>
+      <Badge variant="outline" className="h-auto max-w-full gap-2 rounded-none px-3 py-1 text-xs whitespace-normal">
+        <span class="relative flex size-2">
+          <span class="absolute inline-flex size-full animate-ping rounded-full bg-ok opacity-60"></span>
+          <span class="relative inline-flex size-2 rounded-full bg-ok"></span>
+        </span>
+        Dados oficiais do Banco Central
+      </Badge>
+      <h1 class="mt-5 font-heading text-4xl font-bold tracking-tight text-balance sm:text-6xl">
+        Todo o sistema financeiro
+        <AnimatedGradientText colorFrom="var(--color-primary)" colorTo="var(--color-info)" speed={1.4}>
+          no seu radar
+        </AnimatedGradientText>
+      </h1>
+      <p class="mt-5 max-w-xl text-lg text-pretty text-muted-foreground">
+        Bancos, financeiras, cooperativas e o Pix em números: quem são, quão sólidos são e quanto cobram. Dados públicos,
+        atualizados toda semana.
+      </p>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a
+          href={url('/instituicoes')}
+          class="inline-flex h-11 items-center gap-2 rounded-none bg-primary px-5 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition hover:bg-primary/90"
+        >
+          Explorar instituições <ArrowRight className="size-4" />
+        </a>
+        <a
+          href={url('/reclamacoes')}
+          class="inline-flex h-11 items-center gap-2 rounded-none px-5 text-sm font-medium ring-1 ring-foreground/15 transition hover:bg-muted"
+        >
+          Ver ranking de reclamações
+        </a>
+      </div>
+    </div>
+    <div class="flex justify-center lg:justify-end">
+      <RadarHero />
+    </div>
+  </section>
+
+  <!-- Números -->
+  <section class="mt-14 grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <Stat label="Instituições supervisionadas" value={meta.totais.instituicoes} hint={`IF.data, ${meta.ifdata}`} beam />
+    <Stat
+      label="Ativos do sistema"
+      prefix="R$ "
+      value={Number((meta.totais.ativoTotal / 1e12).toFixed(1))}
+      decimals={1}
+      suffix=" tri"
+      hint="Soma dos ativos das instituições"
+    />
+    <Stat
+      label={`Transações Pix em ${pixUltimo.label}`}
+      value={Number((pixUltimo.quantidade / 1e9).toFixed(1))}
+      decimals={1}
+      suffix=" bi"
+      hint={`${reaisCompacto(pixUltimo.valor)} movimentados`}
+    />
+    <Stat
+      label="Chaves Pix cadastradas"
+      value={Number((pix.chaves.total / 1e9).toFixed(2))}
+      decimals={2}
+      suffix=" bi"
+      hint="Em todas as instituições"
+    />
+  </section>
+
+  <!-- Seções -->
+  <section class="mt-16">
+    <h2 class="font-heading text-2xl font-semibold tracking-tight">Explore</h2>
+    <p class="mt-1 text-muted-foreground">Comece por onde fizer mais sentido para você.</p>
+    <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <ExploreCard
+        client:visible
+        href={url('/instituicoes')}
+        icon="Building2"
+        title="Instituições"
+        description="Raio-x de cada banco, financeira e cooperativa: porte, solidez, tarifas e juros."
+        stat={`${meta.totais.instituicoes.toLocaleString('pt-BR')} instituições`}
+      />
+      <ExploreCard
+        client:visible
+        href={url('/reclamacoes')}
+        icon="FileWarning"
+        title="Reclamações"
+        description="Quem mais recebe reclamações procedentes no Banco Central, proporcionalmente aos clientes."
+        stat={meta.reclamacoes}
+      />
+      <ExploreCard
+        client:visible
+        href={url('/juros')}
+        icon="Percent"
+        title="Juros"
+        description="As taxas praticadas por instituição em cartão, cheque especial, consignado e mais."
+        stat={`${juros.modalidades.length} modalidades`}
+      />
+      <ExploreCard
+        client:visible
+        href={url('/pix')}
+        icon="Zap"
+        title="Pix"
+        description="Quanto o país usa o Pix, para quê, e como andam as contestações por fraude."
+        stat={`${quantidadeCompacta(pixUltimo.quantidade)} transações/mês`}
+      />
+    </div>
+  </section>
+
+  <section class="mt-16 grid gap-6 lg:grid-cols-2">
+    <!-- Maiores -->
+    <div class="rounded-none bg-card p-6 ring-1 ring-foreground/10">
+      <div class="flex items-baseline justify-between">
+        <h2 class="font-heading text-lg font-semibold">Maiores instituições</h2>
+        <a href={url('/instituicoes')} class="text-sm text-primary hover:underline">Ver todas</a>
+      </div>
+      <p class="text-sm text-muted-foreground">Por ativo total, {meta.ifdata}</p>
+      <ol class="mt-4 divide-y">
+        {
+          maiores.map((i) => (
+            <li>
+              <a href={url(`/instituicoes/${i.slug}`)} class="flex items-center gap-3 py-2.5 transition-colors hover:text-primary">
+                <span class="w-6 text-right text-sm text-muted-foreground tabular">{i.rankingAtivo}º</span>
+                <span class="min-w-0 flex-1 truncate font-medium">{i.nome}</span>
+                <span class="text-sm text-muted-foreground tabular">{reaisCompacto(i.indicadores.ativoTotal)}</span>
+                <span class="hidden w-20 text-right text-xs text-muted-foreground sm:inline">
+                  Basileia {percentual(i.indicadores.indiceBasileia)}
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+
+    <!-- Reclamações -->
+    <div class="rounded-none bg-card p-6 ring-1 ring-foreground/10">
+      <div class="flex items-baseline justify-between">
+        <h2 class="font-heading text-lg font-semibold">Mais reclamadas</h2>
+        <a href={url('/reclamacoes')} class="text-sm text-primary hover:underline">Ranking completo</a>
+      </div>
+      <p class="text-sm text-muted-foreground">Entre as 15 maiores, {reclamacoes.periodo} · índice por milhão de clientes</p>
+      <ol class="mt-4 space-y-3">
+        {
+          maisReclamadas.map((r) => (
+            <li>
+              <a href={r.slug ? url(`/instituicoes/${r.slug}`) : undefined} class="group block">
+                <div class="flex items-baseline justify-between gap-3 text-sm">
+                  <span class="truncate font-medium group-hover:text-primary">
+                    {r.posicao}º {r.exibicao ?? r.nome}
+                  </span>
+                  <span class="text-muted-foreground tabular">{r.indice?.toLocaleString('pt-BR')}</span>
+                </div>
+                <div class="mt-1.5 h-2 overflow-hidden bg-muted">
+                  <div
+                    class="h-full bg-linear-to-r from-warn to-destructive"
+                    style={`width:${((r.indice ?? 0) / maxReclam) * 100}%`}
+                  />
+                </div>
+              </a>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <section class="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
+    <!-- Pix -->
+    <div class="rounded-none bg-card p-6 ring-1 ring-foreground/10">
+      <div class="flex items-baseline justify-between">
+        <h2 class="font-heading text-lg font-semibold">Pix nos últimos 13 meses</h2>
+        <a href={url('/pix')} class="text-sm text-primary hover:underline">Mais sobre o Pix</a>
+      </div>
+      <p class="text-sm text-muted-foreground">Quantidade de transações por mês</p>
+      <div class="mt-4">
+        <PixChart client:visible dados={pix.serie.map((m) => ({ label: m.label, valor: m.quantidade }))} altura={220} />
+      </div>
+    </div>
+    <!-- Juros -->
+    {
+      rotativo && (
+        <div class="rounded-none bg-card p-6 ring-1 ring-foreground/10">
+          <h2 class="font-heading text-lg font-semibold">Cartão rotativo</h2>
+          <p class="text-sm text-muted-foreground">Menores taxas ao mês, semana de {juros.periodo.inicio.split('-').reverse().join('/')}</p>
+          <ol class="mt-4 divide-y">
+            {rotativo.taxas.slice(0, 5).map((t) => (
+              <li class="flex items-center justify-between gap-3 py-2 text-sm">
+                <span class="truncate">{t.nome}</span>
+                <span class="font-medium tabular">{taxa(t.taxaMes)}</span>
+              </li>
+            ))}
+          </ol>
+          <a href={url('/juros')} class="mt-4 inline-block text-sm text-primary hover:underline">
+            Todas as modalidades
+          </a>
+        </div>
+      )
+    }
+  </section>
+</Base>
