@@ -6,6 +6,24 @@ interface Props {
   class?: string
 }
 const { compact = false, class: className = '' } = Astro.props
+
+// "Blips": cada um fica num rumo (graus, sentido horário a partir do topo) e
+// muda de distância do centro a cada volta, como um alvo se movendo. Ele
+// acende no instante em que a varredura passa por ele e depois some.
+const VOLTA = 4 // segundos por volta (igual a radar-sweep)
+const BORDA = 45 // a borda da frente da varredura começa a 45°
+const blips = [
+  { rumo: 60, posicoes: [[60, 11], [56, 7.5], [64, 4]] },
+  { rumo: 170, posicoes: [[170, 5], [175, 9], [166, 12.5]] },
+  { rumo: 290, posicoes: [[290, 12], [284, 8], [295, 10]] },
+].map(({ rumo, posicoes }) => {
+  const xy = posicoes.map(([graus, raio]) => {
+    const rad = (graus * Math.PI) / 180
+    return `${(16 + raio * Math.sin(rad) - 2.5).toFixed(2)}px ${(16 - raio * Math.cos(rad) - 2.5).toFixed(2)}px`
+  })
+  const atraso = ((((rumo - BORDA) / 360) * VOLTA + VOLTA) % VOLTA).toFixed(2)
+  return `--p1:${xy[0]};--p2:${xy[1]};--p3:${xy[2]};animation-delay:${atraso}s`
+})
 ---
 
 <span class:list={['inline-flex items-center gap-2.5', className]}>
@@ -29,7 +47,7 @@ const { compact = false, class: className = '' } = Astro.props
       </defs>
       <path d="M16 16 L16 1 A15 15 0 0 1 26.6 5.4 Z" fill="url(#sweep)" />
     </svg>
-    <span class="absolute top-[30%] right-[28%] size-1.5 rounded-full bg-info shadow-[0_0_8px] shadow-info"></span>
+    {blips.map((estilo) => <span class="blip bg-info shadow-[0_0_6px] shadow-info" style={estilo} />)}
   </span>
   {
     !compact && (
@@ -44,3 +62,37 @@ const { compact = false, class: className = '' } = Astro.props
     )
   }
 </span>
+
+<style>
+  .blip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 5px;
+    height: 5px;
+    border-radius: 9999px;
+    opacity: 0;
+    translate: var(--p1);
+    /* Acende a cada volta (4s) e troca de lugar a cada volta (12s = 3 posições). */
+    animation:
+      blip-acende 4s ease-out infinite,
+      blip-move 12s linear infinite;
+    /* animation-delay vem do style de cada blip (sincroniza com a varredura). */
+  }
+  @keyframes blip-acende {
+    0% { opacity: 1; scale: 1.6; }
+    12% { opacity: 1; scale: 1; }
+    75%, 100% { opacity: 0; scale: 0.8; }
+  }
+  @keyframes blip-move {
+    0%, 33.32% { translate: var(--p1); }
+    33.33%, 66.65% { translate: var(--p2); }
+    66.66%, 100% { translate: var(--p3); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .blip {
+      animation: none;
+      opacity: 1;
+    }
+  }
+</style>
